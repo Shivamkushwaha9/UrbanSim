@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanSim | Physics-Informed Neural Networks for Urban Heat Mitigation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #080c14;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --bg-card-hover: rgba(30, 41, 59, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-accent: rgba(0, 242, 254, 0.3);
+            
+            --cyan: #00f2fe;
+            --blue: #4facfe;
+            --emerald: #10b981;
+            --amber: #f59e0b;
+            --rose: #f43f5e;
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(244, 63, 94, 0.05) 0%, transparent 40%);
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Header Navigation */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2.5rem;
+            border-bottom: 1px solid var(--border-glass);
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--cyan), var(--blue));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #080c14;
+        }
+
+        .brand-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.45rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff, var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 1rem;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 30px;
+            font-size: 0.82rem;
+            color: #34d399;
+            font-weight: 500;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #34d399;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #34d399;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+        }
+
+        /* Main Container */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem 2.5rem;
+            display: grid;
+            grid-template-columns: 360px 1fr 380px;
+            gap: 1.75rem;
+        }
+
+        /* Metric Highlights */
+        .metric-grid {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-card {
+            padding: 1.4rem 1.6rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .card-cyan::before { background: var(--cyan); }
+        .card-rose::before { background: var(--rose); }
+        .card-emerald::before { background: var(--emerald); }
+        .card-amber::before { background: var(--amber); }
+
+        .metric-label {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .metric-val {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.1rem;
+            font-weight: 700;
+            margin: 0.4rem 0 0.2rem 0;
+            color: var(--text-primary);
+        }
+
+        .metric-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Left Panel - Climate & Physics Control */
+        .panel-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .control-group {
+            margin-bottom: 1.4rem;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .control-val {
+            color: var(--cyan);
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--cyan);
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--cyan);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Center Map Canvas Area */
+        .map-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .map-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .map-view-tabs {
+            display: flex;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border-glass);
+        }
+
+        .view-tab {
+            padding: 0.45rem 1rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-tab.active {
+            background: linear-gradient(135deg, var(--cyan), var(--blue));
+            color: #080c14;
+            box-shadow: 0 2px 10px rgba(0, 242, 254, 0.3);
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            max-height: 600px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #060910;
+            border: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #urbanCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .legend-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-gradient {
+            flex: 1;
+            height: 10px;
+            margin: 0 1rem;
+            border-radius: 5px;
+            background: linear-gradient(to right, #313695, #4575b4, #74add1, #abd9e9, #fee090, #fdae61, #f46d43, #d73027, #a50026);
+        }
+
+        /* Right Panel - Mitigation & Differentiable Optimization */
+        .btn-gradient {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            border: none;
+            border-radius: 10px;
+            color: #080c14;
+            font-weight: 700;
+            font-size: 0.92rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 26px rgba(0, 242, 254, 0.5);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 0.7rem 1.2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .zone-pill {
+            display: inline-block;
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.4rem;
+            margin-bottom: 0.4rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .zone-pill.selected {
+            background: rgba(0, 242, 254, 0.15);
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        /* Tooltip */
+        #mapTooltip {
+            position: absolute;
+            display: none;
+            background: rgba(10, 15, 29, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cyan);
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            min-width: 190px;
+        }
+
+        .tooltip-title {
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            margin-bottom: 0.3rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.3rem;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        .tooltip-val {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Loading Spinner Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(6, 9, 16, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            z-index: 200;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(0, 242, 254, 0.2);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 1300px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            .metric-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="brand-icon">U</div>
+            <div>
+                <h1 class="brand-title">UrbanSim Digital Twin</h1>
+                <p class="brand-subtitle">Physics-Informed GNN Microclimate Simulator</p>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <div class="status-badge">
+                <div class="pulse-dot"></div>
+                Surrogate Active (10³x Speedup)
+            </div>
+            <a href="/research-paper" target="_blank" style="text-decoration: none;">
+                <button class="btn-secondary" style="margin-top: 0; padding: 0.5rem 1rem;">View Research Paper</button>
+            </a>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+
+        <!-- Top Metric Highlights -->
+        <div class="metric-grid">
+            <div class="glass-card metric-card card-rose">
+                <div class="metric-label">Mean Surface Temperature (LST)</div>
+                <div class="metric-val" id="metricMeanLST">39.4°C</div>
+                <div class="metric-sub">Pre-monsoon heatwave equilibrium</div>
+            </div>
+
+            <div class="glass-card metric-card card-amber">
+                <div class="metric-label">Peak Canyon Hotspot</div>
+                <div class="metric-val" id="metricPeakLST">46.8°C</div>
+                <div class="metric-sub" id="metricHotspotZone">Dharavi Tin Roof Enclave</div>
+            </div>
+
+            <div class="glass-card metric-card card-cyan">
+                <div class="metric-label">SEB Energy Balance Violation</div>
+                <div class="metric-val" id="metricResidual">3.8 W/m²</div>
+                <div class="metric-sub">Physical conservation enforced via PINN</div>
+            </div>
+
+            <div class="glass-card metric-card card-emerald">
+                <div class="metric-label">Optimal Mitigation Cooling</div>
+                <div class="metric-val" id="metricCoolingDelta">-3.4°C</div>
+                <div class="metric-sub">Differentiable gradient allocation</div>
+            </div>
+        </div>
+
+        <!-- Left Column: Ambient Weather & Physics Boundary Controls -->
+        <div class="glass-card" style="padding: 1.75rem;">
+            <div class="panel-title">
+                <span>Climate & Boundary</span>
+                <span style="font-size: 0.8rem; color: var(--cyan); font-weight: 500;">Mumbai IMD Station</span>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Diurnal Solar Hour</span>
+                    <span class="control-val" id="valHour">14:00 (Peak Heat)</span>
+                </div>
+                <input type="range" id="sliderHour" min="8" max="18" step="0.5" value="14">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Ambient Air Temp (T_air)</span>
+                    <span class="control-val" id="valAirTemp">36.5°C</span>
+                </div>
+                <input type="range" id="sliderAirTemp" min="26" max="44" step="0.5" value="36.5">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Solar Irradiance (S_down)</span>
+                    <span class="control-val" id="valSolar">920 W/m²</span>
+                </div>
+                <input type="range" id="sliderSolar" min="100" max="1150" step="10" value="920">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Wind Speed (Coastal Breeze)</span>
+                    <span class="control-val" id="valWind">3.4 m/s</span>
+                </div>
+                <input type="range" id="sliderWind" min="0.5" max="8.0" step="0.1" value="3.4">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Relative Humidity</span>
+                    <span class="control-val" id="valRH">68%</span>
+                </div>
+                <input type="range" id="sliderRH" min="30" max="95" step="1" value="68">
+            </div>
+
+            <button class="btn-secondary" id="btnResetWeather" style="margin-top: 1rem;">Reset to Default Weather</button>
+        </div>
+
+        <!-- Center Column: Interactive Geospatial Canvas & Heatmap -->
+        <div class="map-section">
+            <div class="map-header-bar">
+                <div>
+                    <h2 style="font-size: 1.2rem; font-weight: 700;">Spatial Thermal Landscape (1 km² Sector)</h2>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">400 Building Footprints & Street Canyons (50m resolution)</p>
+                </div>
+
+                <div class="map-view-tabs">
+                    <button class="view-tab active" id="tabPreLST">Baseline LST</button>
+                    <button class="view-tab" id="tabPostLST">Optimized LST</button>
+                    <button class="view-tab" id="tabDelta">Cooling Delta (ΔT)</button>
+                    <button class="view-tab" id="tabHeight">3D Heights</button>
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="urbanCanvas" width="600" height="600"></canvas>
+                
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <p style="font-weight: 600; font-size: 0.95rem; color: var(--cyan);" id="loadingText">Running Physics-Informed Neural Inference...</p>
+                </div>
+
+                <div id="mapTooltip">
+                    <div class="tooltip-title" id="ttTitle">Block #104</div>
+                    <div class="tooltip-row"><span>Zone:</span><span class="tooltip-val" id="ttZone">BKC Commercial</span></div>
+                    <div class="tooltip-row"><span>Height:</span><span class="tooltip-val" id="ttHeight">48.2 m</span></div>
+                    <div class="tooltip-row"><span>Surface Temp:</span><span class="tooltip-val" id="ttTemp" style="color: #f43f5e;">42.1°C</span></div>
+                    <div class="tooltip-row"><span>Albedo:</span><span class="tooltip-val" id="ttAlbedo">0.24</span></div>
+                    <div class="tooltip-row"><span>Veg Fraction:</span><span class="tooltip-val" id="ttVeg">0.12</span></div>
+                    <div class="tooltip-row"><span>Sky View Factor:</span><span class="tooltip-val" id="ttSVF">0.42</span></div>
+                </div>
+            </div>
+
+            <div class="glass-card legend-bar">
+                <span id="legendMin">32.0°C (Cooling Buffer)</span>
+                <div class="legend-gradient"></div>
+                <span id="legendMax">48.0°C (Extreme Hotspot)</span>
+            </div>
+        </div>
+
+        <!-- Right Column: Differentiable Optimization Lab -->
+        <div class="glass-card" style="padding: 1.75rem;">
+            <div class="panel-title">
+                <span>Mitigation Planner</span>
+                <span style="font-size: 0.8rem; color: var(--emerald); font-weight: 600;">Differentiable AI</span>
+            </div>
+
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.45;">
+                Allocate cool roofs, green roofs, and reflective pavements via gradient backpropagation through the surrogate.
+            </p>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Municipal Budget (USD)</span>
+                    <span class="control-val" id="valBudget">$1,500,000</span>
+                </div>
+                <input type="range" id="sliderBudget" min="250000" max="4000000" step="125000" value="1500000">
+            </div>
+
+            <div style="margin-bottom: 1.2rem;">
+                <label style="font-size: 0.82rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem; font-weight: 500;">Target Priority Zones:</label>
+                <div>
+                    <span class="zone-pill selected" data-zone="ALL">All Mumbai Sector</span>
+                    <span class="zone-pill" data-zone="Dharavi_Informal">Dharavi Tin Roofs</span>
+                    <span class="zone-pill" data-zone="BKC_Commercial">BKC High-Rise</span>
+                    <span class="zone-pill" data-zone="Kurla_Highway">Kurla Highway</span>
+                </div>
+            </div>
+
+            <button class="btn-gradient" id="btnOptimize">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                Solve Optimal Allocation
+            </button>
+
+            <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-glass); padding-top: 1.25rem;">
+                <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem;">Optimization Impact</h4>
+                <div class="tooltip-row" style="margin-bottom: 0.4rem;">
+                    <span>Allocated Capital:</span>
+                    <span class="tooltip-val" id="optCost">$1,482,000</span>
+                </div>
+                <div class="tooltip-row" style="margin-bottom: 0.4rem;">
+                    <span>Average District Cooling:</span>
+                    <span class="tooltip-val" id="optMeanCool" style="color: var(--emerald);">-2.9°C</span>
+                </div>
+                <div class="tooltip-row" style="margin-bottom: 0.4rem;">
+                    <span>Max Hotspot Drop:</span>
+                    <span class="tooltip-val" id="optMaxCool" style="color: var(--cyan);">-4.8°C</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // State variables
+        let urbanState = null;
+        let baselineTemps = [];
+        let optimizedTemps = [];
+        let deltaTemps = [];
+        let currentView = 'baseline'; // baseline, optimized, delta, height
+        let selectedZone = 'ALL';
+
+        const canvas = document.getElementById('urbanCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('mapTooltip');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Color thermal mapping
+        function getThermalColor(val, minVal, maxVal) {
+            const norm = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal + 1e-5)));
+            // Infernal color map approximation
+            if (norm < 0.25) {
+                const t = norm / 0.25;
+                return `rgb(${Math.round(20 + 40*t)}, ${Math.round(20 + 20*t)}, ${Math.round(120 + 80*t)})`;
+            } else if (norm < 0.5) {
+                const t = (norm - 0.25) / 0.25;
+                return `rgb(${Math.round(60 + 130*t)}, ${Math.round(40 + 40*t)}, ${Math.round(200 - 80*t)})`;
+            } else if (norm < 0.75) {
+                const t = (norm - 0.5) / 0.25;
+                return `rgb(${Math.round(190 + 55*t)}, ${Math.round(80 + 70*t)}, ${Math.round(120 - 90*t)})`;
+            } else {
+                const t = (norm - 0.75) / 0.25;
+                return `rgb(${Math.round(245 + 10*t)}, ${Math.round(150 + 90*t)}, ${Math.round(30 + 100*t)})`;
+            }
+        }
+
+        function getCoolingColor(delta) {
+            // Delta in deg C (0 to 6 deg C)
+            const norm = Math.max(0, Math.min(1, delta / 5.5));
+            const r = Math.round(16 + (0 - 16) * norm);
+            const g = Math.round(185 + (242 - 185) * norm);
+            const b = Math.round(129 + (254 - 129) * norm);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // Fetch initial state
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/state');
+                urbanState = await res.json();
+                baselineTemps = urbanState.nodes.map(n => n.temperature_c);
+                optimizedTemps = [...baselineTemps];
+                deltaTemps = new Array(urbanState.nodes.length).fill(0);
+                
+                updateMetrics();
+                renderCanvas();
+            } catch (err) {
+                console.error("Failed to load initial state", err);
+            }
+        }
+
+        function updateMetrics() {
+            if (!urbanState) return;
+            const temps = (currentView === 'optimized') ? optimizedTemps : baselineTemps;
+            const mean = (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1);
+            const max = Math.max(...temps).toFixed(1);
+
+            document.getElementById('metricMeanLST').textContent = `${mean}°C`;
+            document.getElementById('metricPeakLST').textContent = `${max}°C`;
+        }
+
+        // Render 20x20 Grid Canvas
+        function renderCanvas() {
+            if (!urbanState) return;
+            const size = 20;
+            const cellW = canvas.width / size;
+            const cellH = canvas.height / size;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let minVal = 32.0;
+            let maxVal = 48.0;
+
+            if (currentView === 'delta') {
+                minVal = 0.0;
+                maxVal = 5.0;
+                document.getElementById('legendMin').textContent = '0.0°C (No Intervention)';
+                document.getElementById('legendMax').textContent = '-5.0°C (Max Cooling)';
+            } else {
+                document.getElementById('legendMin').textContent = '32.0°C (Cool Buffer)';
+                document.getElementById('legendMax').textContent = '48.0°C (Severe Hotspot)';
+            }
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const idx = r * size + c;
+                    const node = urbanState.nodes[idx];
+                    let col;
+
+                    if (currentView === 'baseline') {
+                        col = getThermalColor(baselineTemps[idx], minVal, maxVal);
+                    } else if (currentView === 'optimized') {
+                        col = getThermalColor(optimizedTemps[idx], minVal, maxVal);
+                    } else if (currentView === 'delta') {
+                        col = getCoolingColor(deltaTemps[idx]);
+                    } else if (currentView === 'height') {
+                        const hNorm = Math.min(1.0, node.height / 90.0);
+                        const v = Math.round(50 + 200 * hNorm);
+                        col = `rgb(${v}, ${Math.round(v*0.8)}, ${Math.round(255 - v*0.5)})`;
+                    }
+
+                    ctx.fillStyle = col;
+                    ctx.fillRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
+
+                    // Overlay canyon street borders
+                    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                    ctx.strokeRect(c * cellW, r * cellH, cellW, cellH);
+                }
+            }
+        }
+
+        // Mouse hover interaction
+        canvas.addEventListener('mousemove', (e) => {
+            if (!urbanState) return;
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const size = 20;
+            const cellW = canvas.width / size;
+            const cellH = canvas.height / size;
+
+            const col = Math.floor(mouseX / (rect.width / size));
+            const row = Math.floor(mouseY / (rect.height / size));
+
+            if (col >= 0 && col < size && row >= 0 && row < size) {
+                const idx = row * size + col;
+                const node = urbanState.nodes[idx];
+                const temp = (currentView === 'optimized') ? optimizedTemps[idx] : baselineTemps[idx];
+
+                document.getElementById('ttTitle').textContent = `Block #${node.id} (${node.zone.replace('_', ' ')})`;
+                document.getElementById('ttZone').textContent = node.zone;
+                document.getElementById('ttHeight').textContent = `${node.height} m`;
+                document.getElementById('ttTemp').textContent = `${temp.toFixed(1)}°C`;
+                document.getElementById('ttAlbedo').textContent = node.albedo;
+                document.getElementById('ttVeg').textContent = `${(node.veg_fraction * 100).toFixed(0)}%`;
+                document.getElementById('ttSVF').textContent = node.sky_view_factor;
+
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${e.clientX + 15}px`;
+                tooltip.style.top = `${e.clientY + 15}px`;
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
+
+        // Tabs
+        document.getElementById('tabPreLST').addEventListener('click', () => {
+            currentView = 'baseline';
+            setTabActive('tabPreLST');
+            renderCanvas();
+            updateMetrics();
+        });
+        document.getElementById('tabPostLST').addEventListener('click', () => {
+            currentView = 'optimized';
+            setTabActive('tabPostLST');
+            renderCanvas();
+            updateMetrics();
+        });
+        document.getElementById('tabDelta').addEventListener('click', () => {
+            currentView = 'delta';
+            setTabActive('tabDelta');
+            renderCanvas();
+        });
+        document.getElementById('tabHeight').addEventListener('click', () => {
+            currentView = 'height';
+            setTabActive('tabHeight');
+            renderCanvas();
+        });
+
+        function setTabActive(id) {
+            document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // Live Weather Sliders
+        const sliderHour = document.getElementById('sliderHour');
+        const sliderAirTemp = document.getElementById('sliderAirTemp');
+        const sliderSolar = document.getElementById('sliderSolar');
+        const sliderWind = document.getElementById('sliderWind');
+        const sliderRH = document.getElementById('sliderRH');
+
+        function triggerSimulation() {
+            const hour = parseFloat(sliderHour.value);
+            const air = parseFloat(sliderAirTemp.value);
+            const solar = parseFloat(sliderSolar.value);
+            const wind = parseFloat(sliderWind.value);
+            const rh = parseFloat(sliderRH.value);
+
+            document.getElementById('valHour').textContent = `${hour.toFixed(1)}:00`;
+            document.getElementById('valAirTemp').textContent = `${air.toFixed(1)}°C`;
+            document.getElementById('valSolar').textContent = `${solar.toFixed(0)} W/m²`;
+            document.getElementById('valWind').textContent = `${wind.toFixed(1)} m/s`;
+            document.getElementById('valRH').textContent = `${rh.toFixed(0)}%`;
+
+            fetch('/api/simulate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    hour: hour,
+                    air_temp_c: air,
+                    solar_irradiance: solar,
+                    wind_speed: wind,
+                    relative_humidity: rh
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                baselineTemps = data.temperatures_c;
+                document.getElementById('metricResidual').textContent = `${data.stats.mean_energy_residual_w_m2} W/m²`;
+                updateMetrics();
+                renderCanvas();
+            });
+        }
+
+        [sliderHour, sliderAirTemp, sliderSolar, sliderWind, sliderRH].forEach(sl => {
+            sl.addEventListener('input', triggerSimulation);
+        });
+
+        // Zone selection pills
+        document.querySelectorAll('.zone-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.zone-pill').forEach(p => p.classList.remove('selected'));
+                pill.classList.add('selected');
+                selectedZone = pill.getAttribute('data-zone');
+            });
+        });
+
+        // Budget slider
+        const sliderBudget = document.getElementById('sliderBudget');
+        sliderBudget.addEventListener('input', () => {
+            const b = parseInt(sliderBudget.value);
+            document.getElementById('valBudget').textContent = `$${b.toLocaleString()}`;
+        });
+
+        // Run Differentiable Optimization
+        document.getElementById('btnOptimize').addEventListener('click', async () => {
+            loadingOverlay.style.display = 'flex';
+            document.getElementById('loadingText').textContent = 'Backpropagating through PI-GNN Surrogate...';
+
+            const budget = parseFloat(sliderBudget.value);
+            const zones = (selectedZone === 'ALL') ? null : [selectedZone];
+
+            try {
+                const res = await fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        budget_usd: budget,
+                        target_zones: zones
+                    })
+                });
+
+                const data = await res.json();
+                baselineTemps = data.baseline_lst;
+                optimizedTemps = data.optimized_lst;
+                deltaTemps = data.delta_t;
+
+                document.getElementById('optCost').textContent = `$${Math.round(data.actual_cost_usd).toLocaleString()}`;
+                document.getElementById('optMeanCool').textContent = `-${data.mean_cooling_c.toFixed(1)}°C`;
+                document.getElementById('optMaxCool').textContent = `-${data.max_cooling_c.toFixed(1)}°C`;
+                document.getElementById('metricCoolingDelta').textContent = `-${data.mean_cooling_c.toFixed(1)}°C`;
+
+                // Automatically switch to Delta view
+                currentView = 'delta';
+                setTabActive('tabDelta');
+                renderCanvas();
+                updateMetrics();
+            } catch (err) {
+                console.error("Optimization failed", err);
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        });
+
+        // Initialize
+        fetchState();
+    </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "Empirical TEB": {
+    "MAE": 2.075,
+    "RMSE": 2.448,
+    "R2": -0.1128,
+    "SEB_Residual_W_m2": 69.15,
+    "Latency_ms": 0.88
+  },
+  "Standard MLP": {
+    "MAE": 1.981,
+    "RMSE": 2.417,
+    "R2": -0.0849,
+    "SEB_Residual_W_m2": 53.97,
+    "Latency_ms": 0.61
+  },
+  "Non-Physics GAT": {
+    "MAE": 1.861,
+    "RMSE": 2.317,
+    "R2": 0.0031,
+    "SEB_Residual_W_m2": 50.82,
+    "Latency_ms": 1.94
+  },
+  "UrbanSim (PI-GNN)": {
+    "MAE": 0.689,
+    "RMSE": 0.857,
+    "R2": 0.8635,
+    "SEB_Residual_W_m2": 19.87,
+    "Latency_ms": 12.09
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "budget_usd": 1500000.0,
+  "results": {
+    "baseline_mean_lst": 55.15525436401367,
+    "optimized_mean_lst": 54.86521911621094,
+    "mean_cooling_c": 0.29002711176872253,
+    "max_cooling_c": 0.7660560607910156,
+    "actual_cost_usd": 1500000.0
+  },
+  "pareto_frontier": [
+    {
+      "budget_usd": 250000.0,
+      "actual_cost_usd": 249999.96875,
+      "mean_cooling_c": 0.03855122625827789,
+      "max_cooling_c": 0.103759765625,
+      "optimized_mean_lst": 55.11669921875
+    },
+    {
+      "budget_usd": 500000.0,
+      "actual_cost_usd": 499999.9375,
+      "mean_cooling_c": 0.07723173499107361,
+      "max_cooling_c": 0.20703887939453125,
+      "optimized_mean_lst": 55.07801818847656
+    },
+    {
+      "budget_usd": 1000000.0,
+      "actual_cost_usd": 1000000.0625,
+      "mean_cooling_c": 0.15557269752025604,
+      "max_cooling_c": 0.3858680725097656,
+      "optimized_mean_lst": 54.99967956542969
+    },
+    {
+      "budget_usd": 1750000.0,
+      "actual_cost_usd": 1750000.25,
+      "mean_cooling_c": 0.27373772859573364,
+      "max_cooling_c": 0.6085586547851562,
+      "optimized_mean_lst": 54.88151550292969
+    },
+    {
+      "budget_usd": 3000000.0,
+      "actual_cost_usd": 3000000.0,
+      "mean_cooling_c": 0.4718632400035858,
+      "max_cooling_c": 0.9457015991210938,
+      "optimized_mean_lst": 54.683387756347656
+    }
+  ]
+}
